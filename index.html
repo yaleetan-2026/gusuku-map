@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gusuku Ceramic Assemblages</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
+<style>
+:root{--navy:#0f1623;--navy2:#161f30;--navy3:#1e2a3f;--gold:#c9a84c;--celadon:#7ba99a;--cream:#f0ebe0;--muted:#8a8577;--blue:#5a9fd4;--amber:#d4841a;--border:rgba(201,168,76,0.18);--border2:rgba(255,255,255,0.07);}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'DM Mono','Courier New',monospace;background:var(--navy);color:var(--cream);height:100vh;display:flex;flex-direction:column;overflow:hidden;}
+.hdr{height:48px;flex-shrink:0;background:var(--navy);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 1.5rem;}
+.hdr-title{font-family:'EB Garamond',Georgia,serif;font-size:14px;color:var(--gold);letter-spacing:.04em;}
+.tabs{display:flex;height:100%;}
+.tab{font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);padding:0 16px;display:flex;align-items:center;cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;}
+.tab:hover{color:var(--cream);}
+.tab.on{color:var(--gold);border-bottom-color:var(--gold);}
+.main{flex:1;display:flex;overflow:hidden;}
+.map-panel{flex:1;position:relative;display:flex;flex-direction:column;}
+#map{flex:1;}
+.leaflet-container{background:#0c1825;font-family:'DM Mono',monospace;}
+.leaflet-control-zoom a{background:var(--navy2)!important;color:var(--gold)!important;border-color:var(--border)!important;}
+.leaflet-control-zoom a:hover{background:var(--navy3)!important;}
+.leaflet-control-attribution{background:rgba(10,18,30,.75)!important;color:var(--muted)!important;font-size:9px!important;}
+.leaflet-control-attribution a{color:var(--celadon)!important;}
+.leaflet-popup-content-wrapper{background:var(--navy2)!important;border:1px solid var(--border)!important;border-radius:6px!important;box-shadow:0 4px 24px rgba(0,0,0,.6)!important;color:var(--cream)!important;}
+.leaflet-popup-content{margin:12px 15px!important;min-width:190px;}
+.leaflet-popup-tip{background:var(--navy2)!important;}
+.leaflet-popup-close-button{color:var(--muted)!important;font-size:18px!important;right:8px!important;top:6px!important;}
+.leaflet-popup-close-button:hover{color:var(--gold)!important;}
+.pop-name{font-family:'EB Garamond',serif;font-size:14px;color:var(--gold);margin-bottom:4px;font-weight:500;}
+.pop-sub{font-size:10px;color:var(--muted);margin-bottom:8px;font-style:italic;}
+.pop-row{display:flex;justify-content:space-between;gap:14px;font-size:11px;padding:3px 0;border-bottom:.5px solid var(--border2);}
+.pop-row:last-of-type{border-bottom:none;}
+.pop-k{color:var(--muted);}
+.map-filters{position:absolute;top:12px;left:50px;z-index:900;display:flex;gap:5px;}
+.mfp{font-size:10px;padding:4px 10px;border-radius:20px;border:.5px solid rgba(255,255,255,.18);background:rgba(10,18,30,.88);color:var(--muted);cursor:pointer;transition:all .15s;backdrop-filter:blur(4px);}
+.mfp:hover{color:var(--cream);}
+.mfp.on{background:rgba(201,168,76,.14);border-color:var(--gold);color:var(--gold);}
+.map-legend{position:absolute;bottom:24px;left:12px;z-index:900;background:rgba(10,18,30,.9);border:1px solid var(--border);border-radius:5px;padding:10px 12px;font-size:10px;color:var(--muted);backdrop-filter:blur(4px);}
+.ml{display:flex;align-items:center;gap:7px;margin-bottom:5px;}
+.ml:last-child{margin-bottom:0;}
+.ml-c{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+.ml-s{width:10px;height:10px;border-radius:2px;flex-shrink:0;}
+.ml-l{width:20px;height:0;flex-shrink:0;}
+.err-banner{display:none;position:absolute;top:60px;left:50%;transform:translateX(-50%);z-index:1000;background:#3a1a1a;border:1px solid #c0432a;color:#f0a0a0;font-size:11px;padding:10px 16px;border-radius:5px;max-width:440px;text-align:center;line-height:1.6;}
+.sidebar{width:400px;flex-shrink:0;border-left:1px solid var(--border2);display:flex;flex-direction:column;overflow:hidden;background:var(--navy);}
+.sb-head{padding:12px 14px 10px;border-bottom:1px solid var(--border2);flex-shrink:0;}
+.sb-label{font-size:9px;letter-spacing:.1em;color:var(--gold);text-transform:uppercase;display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+.sb-label::before{content:'';display:block;width:16px;height:1px;background:var(--gold);}
+.db-search{width:100%;background:var(--navy2);border:1px solid var(--border);color:var(--cream);font-family:'DM Mono',monospace;font-size:11px;padding:6px 10px;border-radius:3px;outline:none;margin-bottom:7px;}
+.db-search::placeholder{color:var(--muted);}
+.db-search:focus{border-color:var(--gold);}
+.tf-row{display:flex;gap:5px;flex-wrap:wrap;}
+.tf-btn{font-size:10px;padding:3px 9px;border-radius:20px;border:.5px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;transition:all .15s;}
+.tf-btn:hover{color:var(--cream);}
+.tf-btn.on{background:rgba(201,168,76,.1);border-color:var(--gold);color:var(--gold);}
+.site-list{flex:1;overflow-y:auto;}
+.site-list::-webkit-scrollbar{width:4px;}
+.site-list::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:2px;}
+.site-row{padding:10px 14px;border-bottom:.5px solid var(--border2);cursor:pointer;transition:background .12s;}
+.site-row:hover{background:rgba(255,255,255,.03);}
+.site-row.active{background:rgba(201,168,76,.07);border-left:2px solid var(--gold);padding-left:12px;}
+.sr-top{display:flex;align-items:center;gap:8px;margin-bottom:3px;}
+.sr-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.sr-name{font-size:12px;font-weight:500;color:var(--cream);}
+.sr-sub{font-size:10px;color:var(--muted);margin-bottom:6px;}
+.sr-ceramics{display:flex;gap:10px;font-size:10px;}
+.src-item{display:flex;flex-direction:column;align-items:center;gap:2px;}
+.src-label{font-size:9px;color:var(--muted);}
+.det-panel{border-top:1px solid var(--border2);flex-shrink:0;max-height:270px;overflow-y:auto;display:none;}
+.det-panel.show{display:block;}
+.det-panel::-webkit-scrollbar{width:4px;}
+.det-panel::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:2px;}
+.dp{padding:12px 14px;}
+.dp-name{font-family:'EB Garamond',serif;font-size:15px;color:var(--cream);margin-bottom:2px;}
+.dp-kanji{font-size:11px;color:var(--muted);font-style:italic;margin-bottom:10px;}
+.dp-cols{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.dp-head{font-size:9px;letter-spacing:.09em;color:var(--gold);text-transform:uppercase;margin-bottom:7px;}
+.dp-row{display:flex;justify-content:space-between;gap:8px;font-size:10px;padding:3px 0;border-bottom:.5px solid var(--border2);}
+.dp-row:last-child{border-bottom:none;}
+.dp-k{color:var(--muted);}
+.dp-v{color:var(--cream);text-align:right;line-height:1.4;}
+.cer-item{margin-bottom:5px;}
+.cer-top{display:flex;justify-content:space-between;font-size:10px;margin-bottom:2px;}
+.cer-trk{height:4px;background:rgba(255,255,255,.07);border-radius:2px;overflow:hidden;}
+.cer-bar{height:100%;border-radius:2px;}
+.dp-notes{font-size:11px;color:var(--muted);line-height:1.7;font-family:'EB Garamond',serif;margin-top:10px;padding-top:8px;border-top:.5px solid var(--border2);}
+.sb-legend{border-top:1px solid var(--border2);padding:10px 14px;flex-shrink:0;}
+.sl-head{font-size:9px;letter-spacing:.09em;color:var(--gold);margin-bottom:7px;}
+.sl-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px;}
+.sl-row{display:flex;align-items:center;gap:6px;font-size:10px;color:var(--muted);}
+::-webkit-scrollbar{width:4px;height:4px;}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:2px;}
+</style>
+</head>
+<body>
+<header class="hdr">
+  <div class="hdr-title">Gusuku Ceramic Assemblages · Ryukyu Archipelago</div>
+  <nav class="tabs">
+    <div class="tab on" data-view="map">Map only</div>
+    <div class="tab" data-view="both">Map + Database</div>
+    <div class="tab" data-view="db">Database only</div>
+  </nav>
+</header>
+<div class="main">
+  <div class="map-panel" id="map-panel">
+    <div id="map"></div>
+    <div class="map-filters">
+      <div class="mfp on" data-mf="all">All</div>
+      <div class="mfp" data-mf="gusuku">Gusuku</div>
+      <div class="mfp" data-mf="intermediate">Intermediate islands</div>
+      <div class="mfp" data-mf="kiln">Kiln sources</div>
+    </div>
+    <div class="map-legend">
+      <div class="ml"><div class="ml-c" style="background:#c9a84c;border:1.5px solid #f0ebe0;"></div><span>Excavated gusuku</span></div>
+      <div class="ml"><div class="ml-c" style="background:#7ba99a;"></div><span>Intermediate islands</span></div>
+      <div class="ml"><div class="ml-s" style="background:#5a9fd4;"></div><span>Chinese kilns</span></div>
+      <div class="ml"><div class="ml-s" style="background:#d4841a;"></div><span>Vietnamese kilns</span></div>
+      <div class="ml"><div class="ml-l" style="border-top:2px dashed #7ba99a;"></div><span>Celadon route</span></div>
+      <div class="ml"><div class="ml-l" style="border-top:2px dashed #5a9fd4;"></div><span>Japan / BW route</span></div>
+      <div class="ml"><div class="ml-l" style="border-top:2px dashed #d4841a;"></div><span>SE Asia route</span></div>
+    </div>
+    <div class="err-banner" id="err-banner">
+      Map tiles failed to load. This is usually caused by an ad blocker (e.g. uBlock Origin) blocking the CartoDB tile server. Try disabling your ad blocker for this page, then refresh.
+    </div>
+  </div>
+  <div class="sidebar" id="sidebar" style="display:none;">
+    <div class="sb-head">
+      <div class="sb-label">Assemblage Database</div>
+      <input class="db-search" id="db-search" type="text" placeholder="Search sites, periods, regions..."/>
+      <div class="tf-row">
+        <div class="tf-btn on" data-tf="all">All</div>
+        <div class="tf-btn" data-tf="gusuku">Gusuku</div>
+        <div class="tf-btn" data-tf="intermediate">Intermediate</div>
+        <div class="tf-btn" data-tf="kiln">Kiln sources</div>
+      </div>
+    </div>
+    <div class="site-list" id="site-list"></div>
+    <div class="det-panel" id="det-panel">
+      <div class="dp">
+        <div class="dp-name" id="dp-name"></div>
+        <div class="dp-kanji" id="dp-kanji"></div>
+        <div class="dp-cols" id="dp-cols"></div>
+        <div class="dp-notes" id="dp-notes"></div>
+      </div>
+    </div>
+    <div class="sb-legend">
+      <div class="sl-head">CERAMIC PRESENCE KEY</div>
+      <div class="sl-grid">
+        <div class="sl-row"><span style="color:#7ba99a;font-size:13px;">●●●</span><span>Dominant</span></div>
+        <div class="sl-row"><span style="color:#a8ccc4;font-size:13px;">●●</span><span>Significant</span></div>
+        <div class="sl-row"><span style="color:#7a7570;font-size:13px;">●</span><span>Present</span></div>
+        <div class="sl-row"><span style="color:rgba(255,255,255,.15);font-size:13px;">—</span><span>Not reported</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+const SITES=[
+  {id:'uegusuku',name:'Uegusuku Castle',kanji:'宇江城城跡',location:'Kumejima 久米島',type:'gusuku',lat:26.341,lng:126.772,period:'14C late – 16C',primary:'14C late – 15C early',celadon:3,bw:2,brown:2,white:1,viet:1,sherds:'~6,000',report:'久米島町 2008',detail:[['Location','Kumejima 久米島'],['Report','久米島町教育委員会 2008'],['Classification','沖縄分類 / 久米島分類'],['Sherds','~6,000 rims/bases'],['Notable','Anchor stone 碇石']],notes:'Widest assemblage range of all sites. Anchor stone associated with 14–15C junk ship contact.',ceramics:[{n:'Celadon 青磁',p:90,c:'#7ba99a'},{n:'Blue-and-white 染付',p:5,c:'#5a9fd4'},{n:'Brown-glazed 褐釉',p:3,c:'#d4841a'},{n:'White porcelain 白磁',p:1.5,c:'#8a8577'},{n:'Vietnamese 越南',p:.5,c:'#c0432a'}]},
+  {id:'gushikawa',name:'Gushikawa Castle',kanji:'具志川城跡',location:'Kumejima 久米島',type:'gusuku',lat:26.318,lng:126.808,period:'13C – 18C',primary:'13C – 15C',celadon:3,bw:1,brown:1,white:1,viet:0,sherds:'rims/bases',report:'久米島町 2018',detail:[['Location','Kumejima 久米島'],['Report','久米島町教育委員会 2018'],['Classification','久米島分類'],['Dating','Longquan kiln chronology Ch.5'],['Earthenware','グスク土器 present']],notes:'Longest occupational span on Kumejima (13C–18C). Longquan kiln chronology in report Ch. 5.',ceramics:[{n:'Celadon 青磁',p:80,c:'#7ba99a'},{n:'Blue-and-white 染付',p:10,c:'#5a9fd4'},{n:'Brown-glazed 褐釉',p:7,c:'#d4841a'},{n:'White porcelain 白磁',p:3,c:'#8a8577'}]},
+  {id:'iheya',name:'Iheya Island sites',kanji:'伊平屋島遺跡群',location:'Iheya 伊平屋島',type:'intermediate',lat:27.053,lng:127.973,period:'13C–16C (est.)',primary:'—',celadon:1,bw:1,brown:0,white:0,viet:0,sherds:'limited',report:'伊平屋村 2000',detail:[['Report','伊平屋村 2000'],['Preservation','Poor — agricultural impact'],['Survey','Distribution survey only']],notes:'Poor preservation due to agricultural development.',ceramics:[]},
+  {id:'izena',name:'Izena Motojima',kanji:'伊是名元島遺跡',location:'Izena 伊是名島',type:'intermediate',lat:26.924,lng:127.932,period:'13C–16C (est.)',primary:'—',celadon:1,bw:0,brown:0,white:0,viet:0,sherds:'limited',report:'伊是名村 2000',detail:[['Report','伊是名村 2000'],['Status','Further analysis needed']],notes:'Requires further ceramic analysis. Data currently incomplete.',ceramics:[]},
+  {id:'gushikawajima',name:'Gushikawajima sites',kanji:'具志川島遺跡群',location:'具志川島',type:'intermediate',lat:26.196,lng:127.343,period:'—',primary:'—',celadon:0,bw:0,brown:0,white:0,viet:0,sherds:'—',report:'335-page report',detail:[['Report','335-page report'],['Data','Incomplete — PDF issues']],notes:'PDF rendering issues limit current data extraction.',ceramics:[]},
+  {id:'longquan',name:'Longquan kilns',kanji:'龍泉窯',location:'Zhejiang, China',type:'kiln',lat:28.07,lng:119.13,period:'Song–Ming',primary:'13C–15C peak',celadon:3,bw:0,brown:0,white:0,viet:0,sherds:'—',report:'—',detail:[['Product','Celadon 青磁'],['At Uegusuku','●●● ~90% of assemblage'],['At Gushikawa','●●● dominant'],['Period','Song–Ming']],notes:'Primary celadon source for both Kumejima sites.',ceramics:[]},
+  {id:'jingdezhen',name:'Jingdezhen kilns',kanji:'景徳鎮',location:'Jiangxi, China',type:'kiln',lat:29.29,lng:117.21,period:'Ming',primary:'Ming early–mid',celadon:0,bw:2,brown:0,white:1,viet:0,sherds:'—',report:'—',detail:[['Product','Blue-and-white 染付'],['At Uegusuku','●● significant'],['At Gushikawa','● present']],notes:'Source for blue-and-white wares at both sites.',ceramics:[]},
+  {id:'fujian',name:'Fujian coast kilns',kanji:'福建省窯',location:'Fujian, China',type:'kiln',lat:26.08,lng:119.30,period:'Song–Ming',primary:'—',celadon:0,bw:0,brown:1,white:1,viet:0,sherds:'—',report:'—',detail:[['Product','White porcelain 白磁'],['Presence','Both sites ●']],notes:'Source for Fujian-type white porcelain and brown-glazed wares.',ceramics:[]},
+  {id:'vietnam',name:'Vietnamese kilns',kanji:'越南窯',location:'Northern Vietnam',type:'kiln',lat:21.02,lng:105.83,period:'14C–16C',primary:'—',celadon:0,bw:1,brown:0,white:0,viet:1,sherds:'—',report:'—',detail:[['Product','Vietnamese blue-and-white'],['Presence','Uegusuku only ●'],['Significance','Widens network beyond China']],notes:"Rare at Uegusuku only — signals integration into SE Asian circuits beyond China.",ceramics:[]},
+];
+const ROUTES=[
+  {coords:[[28.07,119.13],[27.5,121.8],[27.0,124.0],[26.7,125.8],[26.34,126.77]],color:'#7ba99a'},
+  {coords:[[29.29,117.21],[28.6,120.5],[27.8,123.5],[27.0,125.5],[26.34,126.77]],color:'#5a9fd4'},
+  {coords:[[26.34,126.77],[27.0,128.5],[28.0,130.0],[30.0,130.5],[31.5,130.4]],color:'#5a9fd4'},
+  {coords:[[21.02,105.83],[22.5,109.0],[24.0,113.5],[25.0,118.0],[25.5,122.0],[26.0,125.0],[26.32,126.76]],color:'#d4841a'},
+];
+function gc(s){return s.id==='vietnam'?'#d4841a':{gusuku:'#c9a84c',intermediate:'#7ba99a',kiln:'#5a9fd4'}[s.type]||'#8a8577';}
+function dot(n){if(!n)return '<span style="color:rgba(255,255,255,.15)">—</span>';const g=['●','●●','●●●'],c=['#7a7570','#a8ccc4','#7ba99a'];return `<span style="color:${c[n-1]||'#7a7570'}">${g[n-1]||'●'}</span>`;}
+
+// MAP INIT
+let map,siteMarkers={},routeLayers=[];
+function initMap(){
+  map=L.map('map',{center:[26.0,120.5],zoom:5});
+  const tl=L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_matter/{z}/{x}/{y}{r}.png',{attribution:'&copy; <a href="https://openstreetmap.org">OSM</a> &copy; <a href="https://carto.com">CARTO</a>',subdomains:'abcd',maxZoom:14}).addTo(map);
+  let ok=false;
+  tl.on('tileload',()=>{ok=true;document.getElementById('err-banner').style.display='none';});
+  tl.on('tileerror',()=>{if(!ok)document.getElementById('err-banner').style.display='block';});
+  ROUTES.forEach(r=>{routeLayers.push(L.polyline(r.coords,{color:r.color,weight:2,dashArray:'8 5',opacity:.65}).addTo(map));});
+  SITES.forEach(s=>{
+    const color=gc(s);
+    const isK=s.type==='kiln'||s.id==='vietnam';
+    let m;
+    if(isK){
+      m=L.marker([s.lat,s.lng],{icon:L.divIcon({html:`<div style="width:13px;height:13px;background:${color};border:2px solid rgba(255,255,255,.3);border-radius:3px;box-shadow:0 0 8px ${color}55;"></div>`,className:'',iconSize:[13,13],iconAnchor:[6,6],popupAnchor:[0,-8]})});
+    } else if(s.type==='gusuku'){
+      m=L.circleMarker([s.lat,s.lng],{radius:12,fillColor:color,color:'#f0ebe0',weight:2.5,fillOpacity:.9});
+    } else {
+      m=L.circleMarker([s.lat,s.lng],{radius:8,fillColor:color,color:'#0f1623',weight:1.5,fillOpacity:.85});
+    }
+    const rows=s.detail.slice(0,3).map(r=>`<div class="pop-row"><span class="pop-k">${r[0]}</span><span class="pop-v">${r[1]}</span></div>`).join('');
+    m.bindPopup(`<div class="pop-name">${s.name}</div><div class="pop-sub">${s.kanji}</div>${rows}<div style="margin-top:8px;font-size:10px;color:#7ba99a;cursor:pointer" onclick="selectSite('${s.id}')">View full record →</div>`,{maxWidth:260});
+    m.on('click',()=>selectSite(s.id));
+    m.addTo(map);
+    siteMarkers[s.id]={marker:m,site:s};
+  });
+  document.querySelectorAll('.mfp').forEach(p=>{
+    p.addEventListener('click',function(){
+      document.querySelectorAll('.mfp').forEach(x=>x.classList.remove('on'));this.classList.add('on');
+      const f=this.dataset.mf;
+      Object.values(siteMarkers).forEach(({marker:m,site:s})=>{
+        const show=f==='all'||s.type===f||(f==='kiln'&&s.id==='vietnam');
+        if(m.setStyle)m.setStyle({opacity:show?1:.08,fillOpacity:show?.9:.05});else m.setOpacity(show?1:.1);
+      });
+      routeLayers.forEach(l=>l.setStyle({opacity:f==='all'?.65:.08}));
+    });
+  });
+}
+
+// DATABASE
+let dbF='all',dbQ='',activeId=null;
+function buildList(){
+  const filtered=SITES.filter(s=>{
+    if(dbF!=='all'&&s.type!==dbF&&!(dbF==='kiln'&&s.id==='vietnam'))return false;
+    if(dbQ){const q=dbQ.toLowerCase();return[s.name,s.kanji,s.location,s.type,s.period,s.report,s.notes].some(v=>v&&v.toLowerCase().includes(q));}
+    return true;
+  });
+  document.getElementById('site-list').innerHTML=filtered.map(s=>`
+    <div class="site-row${activeId===s.id?' active':''}" onclick="selectSite('${s.id}')">
+      <div class="sr-top"><div class="sr-dot" style="background:${gc(s)};"></div><div class="sr-name">${s.name}</div></div>
+      <div class="sr-sub">${s.kanji} · ${s.location} · ${s.period}</div>
+      <div class="sr-ceramics">
+        <div class="src-item"><div class="src-label">青磁</div>${dot(s.celadon)}</div>
+        <div class="src-item"><div class="src-label">染付</div>${dot(s.bw)}</div>
+        <div class="src-item"><div class="src-label">褐釉</div>${dot(s.brown)}</div>
+        <div class="src-item"><div class="src-label">白磁</div>${dot(s.white)}</div>
+        <div class="src-item"><div class="src-label">越南</div>${dot(s.viet)}</div>
+        <div class="src-item"><div class="src-label">sherds</div><span style="font-size:9px;color:var(--muted)">${s.sherds}</span></div>
+      </div>
+    </div>`).join('');
+}
+function selectSite(id){
+  activeId=id; buildList();
+  const s=SITES.find(x=>x.id===id); if(!s)return;
+  document.getElementById('dp-name').textContent=s.name;
+  document.getElementById('dp-kanji').textContent=`${s.kanji} · ${s.location}`;
+  document.getElementById('dp-notes').textContent=s.notes;
+  document.getElementById('dp-cols').innerHTML=`
+    <div><div class="dp-head">Site details</div>${s.detail.map(r=>`<div class="dp-row"><span class="dp-k">${r[0]}</span><span class="dp-v">${r[1]}</span></div>`).join('')}<div class="dp-row"><span class="dp-k">Report</span><span class="dp-v">${s.report}</span></div></div>
+    <div><div class="dp-head">Ceramic assemblage</div>${s.ceramics.length?s.ceramics.map(c=>`<div class="cer-item"><div class="cer-top"><span style="color:var(--muted)">${c.n}</span><span style="color:var(--cream)">~${c.p}%</span></div><div class="cer-trk"><div class="cer-bar" style="width:${c.p}%;background:${c.c}"></div></div></div>`).join(''):'<div style="font-size:10px;color:var(--muted);padding-top:4px">Data not yet quantified</div>'}</div>`;
+  document.getElementById('det-panel').classList.add('show');
+  if(map){map.flyTo([s.lat,s.lng],Math.max(map.getZoom(),6),{duration:.9});const mk=siteMarkers[id];if(mk)setTimeout(()=>mk.marker.openPopup(),900);}
+  if(document.getElementById('sidebar').style.display==='none')setView('both');
+}
+window.selectSite=selectSite;
+document.querySelectorAll('.tf-btn').forEach(b=>{b.addEventListener('click',function(){document.querySelectorAll('.tf-btn').forEach(x=>x.classList.remove('on'));this.classList.add('on');dbF=this.dataset.tf;buildList();});});
+document.getElementById('db-search').addEventListener('input',function(){dbQ=this.value;buildList();});
+
+// VIEW
+function setView(v){
+  const mp=document.getElementById('map-panel'),sb=document.getElementById('sidebar');
+  mp.style.display=v==='db'?'none':'flex';
+  sb.style.display=v==='map'?'none':'flex';
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('on',t.dataset.view===v));
+  if(map&&v!=='db')setTimeout(()=>map.invalidateSize(),60);
+}
+document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>setView(t.dataset.view)));
+
+// INIT
+if(typeof L!=='undefined'){initMap();}else{document.getElementById('err-banner').style.display='block';document.getElementById('err-banner').textContent='Leaflet failed to load — check internet connection.';}
+buildList();
+</script>
+</body>
+</html>
