@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ceramic Assemblages — Ryukyu Gusuku Sites</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', system-ui, sans-serif; background: #1A1A2E; color: #F5F0E8; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+#loading { position: fixed; inset: 0; background: #1A1A2E; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 9999; gap: 12px; }
+#loading p { color: #9A9585; font-size: 13px; }
+#loading .err { color: #E24B4A; font-size: 12px; max-width: 400px; text-align: center; display: none; }
+
+header { background: #1A1A2E; padding: 10px 20px; display: flex; align-items: baseline; gap: 16px; flex-shrink: 0; border-bottom: 1px solid rgba(201,168,76,0.2); }
+header h1 { font-size: 14px; font-weight: 500; color: #C9A84C; letter-spacing: 0.06em; font-family: Georgia, serif; }
+header p { font-size: 11px; color: #9A9585; }
+
+.body { display: flex; flex: 1; overflow: hidden; }
+#map { flex: 1; }
+
+.sidebar { width: 290px; flex-shrink: 0; background: #12121F; border-left: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: column; overflow: hidden; }
+.sidebar-top { padding: 14px 16px 10px; border-bottom: 1px solid rgba(255,255,255,0.07); }
+.sidebar-top h2 { font-size: 10px; letter-spacing: 0.1em; color: #C9A84C; font-weight: 500; margin-bottom: 10px; }
+
+.filters { display: flex; flex-wrap: wrap; gap: 5px; }
+.ftag { font-size: 10px; padding: 3px 9px; border-radius: 20px; border: 0.5px solid rgba(255,255,255,0.15); background: transparent; color: #9A9585; cursor: pointer; transition: all 0.15s; }
+.ftag:hover { border-color: rgba(201,168,76,0.4); color: #C9A84C; }
+.ftag.on { background: rgba(201,168,76,0.12); border-color: #C9A84C; color: #C9A84C; }
+
+.site-list { flex: 1; overflow-y: auto; padding: 8px 0; }
+.site-list::-webkit-scrollbar { width: 4px; }
+.site-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+.site-item { padding: 10px 16px; cursor: pointer; border-bottom: 0.5px solid rgba(255,255,255,0.05); transition: background 0.15s; }
+.site-item:hover { background: rgba(255,255,255,0.04); }
+.site-item.active { background: rgba(201,168,76,0.08); border-left: 2px solid #C9A84C; padding-left: 14px; }
+.site-item-name { font-size: 13px; font-weight: 500; color: #F5F0E8; display: flex; align-items: center; gap: 7px; }
+.site-item-sub { font-size: 10px; color: #9A9585; margin-top: 2px; }
+.type-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+.detail { border-top: 1px solid rgba(255,255,255,0.07); padding: 14px 16px; display: none; overflow-y: auto; max-height: 280px; }
+.detail::-webkit-scrollbar { width: 4px; }
+.detail::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+.detail.show { display: block; }
+.det-name { font-size: 14px; font-weight: 500; color: #F5F0E8; font-family: Georgia, serif; margin-bottom: 2px; }
+.det-kanji { font-size: 11px; color: #9A9585; margin-bottom: 10px; }
+.det-row { display: flex; justify-content: space-between; align-items: flex-start; font-size: 11px; padding: 5px 0; border-bottom: 0.5px solid rgba(255,255,255,0.06); gap: 10px; }
+.det-row:last-child { border-bottom: none; }
+.det-key { color: #9A9585; flex-shrink: 0; }
+.det-val { color: #F5F0E8; text-align: right; font-weight: 500; line-height: 1.4; }
+.cer-label { font-size: 10px; color: #9A9585; margin: 10px 0 6px; letter-spacing: 0.05em; }
+.cer-row { display: flex; align-items: center; gap: 6px; margin-bottom: 5px; }
+.cer-name { font-size: 10px; color: #F5F0E8; width: 100px; flex-shrink: 0; }
+.cer-track { flex: 1; height: 5px; background: rgba(255,255,255,0.07); border-radius: 3px; overflow: hidden; }
+.cer-bar { height: 100%; border-radius: 3px; }
+.cer-dot { font-size: 10px; color: #9A9585; width: 22px; text-align: right; }
+
+.legend-box { padding: 10px 16px; border-top: 1px solid rgba(255,255,255,0.07); flex-shrink: 0; }
+.legend-box h3 { font-size: 10px; letter-spacing: 0.08em; color: #9A9585; margin-bottom: 7px; }
+.leg-row { display: flex; align-items: center; gap: 8px; font-size: 10px; color: #9A9585; margin-bottom: 4px; }
+.leg-circle { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.leg-sq { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+.leg-dash { width: 22px; height: 0; border-top: 2px dashed; flex-shrink: 0; }
+
+.leaflet-container { background: #0d2137; }
+.leaflet-control-zoom a { background: #1A1A2E !important; color: #C9A84C !important; border-color: rgba(201,168,76,0.3) !important; }
+.leaflet-control-attribution { background: rgba(0,0,0,0.5) !important; color: #9A9585 !important; font-size: 9px !important; }
+.leaflet-control-attribution a { color: #7BA99A !important; }
+.leaflet-popup-content-wrapper { background: #1A1A2E; border: 1px solid rgba(201,168,76,0.3); border-radius: 8px; color: #F5F0E8; }
+.leaflet-popup-content { margin: 12px 14px; font-size: 12px; min-width: 200px; }
+.leaflet-popup-tip { background: #1A1A2E; }
+.leaflet-popup-close-button { color: #9A9585 !important; }
+.pop-name { font-size: 13px; font-weight: 500; color: #C9A84C; margin-bottom: 3px; font-family: Georgia, serif; }
+.pop-sub { font-size: 10px; color: #9A9585; margin-bottom: 8px; }
+.pop-row { display: flex; justify-content: space-between; gap: 12px; font-size: 11px; padding: 3px 0; border-bottom: 0.5px solid rgba(255,255,255,0.07); }
+.pop-row:last-child { border-bottom: none; }
+.pop-key { color: #9A9585; }
+.pop-val { color: #F5F0E8; font-weight: 500; text-align: right; }
+</style>
+</head>
+<body>
+
+<div id="loading">
+  <div style="width:32px;height:32px;border:2px solid rgba(201,168,76,0.2);border-top-color:#C9A84C;border-radius:50%;animation:spin 0.8s linear infinite;"></div>
+  <p>Loading map...</p>
+  <p class="err" id="err-msg"></p>
+  <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+</div>
+
+<header>
+  <h1>Ceramic Assemblages from Gusuku Fortress Sites</h1>
+  <p>Ryukyu archipelago · 12th–16th century · Click any marker for details</p>
+</header>
+
+<div class="body">
+  <div id="map"></div>
+  <div class="sidebar">
+    <div class="sidebar-top">
+      <h2>FILTER BY TYPE</h2>
+      <div class="filters">
+        <div class="ftag on" data-filter="all">All</div>
+        <div class="ftag" data-filter="gusuku">Gusuku sites</div>
+        <div class="ftag" data-filter="intermediate">Intermediate islands</div>
+        <div class="ftag" data-filter="kiln">Kiln sources</div>
+        <div class="ftag" data-filter="routes">Trade routes</div>
+      </div>
+    </div>
+    <div class="site-list" id="site-list"></div>
+    <div class="detail" id="detail">
+      <div class="det-name" id="d-name"></div>
+      <div class="det-kanji" id="d-kanji"></div>
+      <div id="d-rows"></div>
+      <div id="d-ceramics"></div>
+    </div>
+    <div class="legend-box">
+      <h3>LEGEND</h3>
+      <div class="leg-row"><div class="leg-circle" style="background:#C9A84C;border:2px solid #F5F0E8;"></div><span>Excavated gusuku</span></div>
+      <div class="leg-row"><div class="leg-circle" style="background:#7BA99A;"></div><span>Intermediate island sites</span></div>
+      <div class="leg-row"><div class="leg-sq" style="background:#378ADD;"></div><span>Chinese kiln sources</span></div>
+      <div class="leg-row"><div class="leg-sq" style="background:#EF9F27;"></div><span>Vietnamese kiln sources</span></div>
+      <div class="leg-row"><div class="leg-dash" style="border-color:#7BA99A;"></div><span>Celadon / China route</span></div>
+      <div class="leg-row"><div class="leg-dash" style="border-color:#378ADD;"></div><span>Japan route</span></div>
+      <div class="leg-row"><div class="leg-dash" style="border-color:#EF9F27;"></div><span>SE Asia route</span></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const SITES = [
+  { id:"uegusuku", name:"Uegusuku Castle", kanji:"宇江城城跡 · Kumejima 久米島", type:"gusuku", lat:26.341, lng:126.772,
+    rows:[["Period","14C late – 16C"],["Primary phase","14C late – 15C early"],["Report","久米島町教育委員会 2008"],["Diagnostic sherds","~6,000 rims/bases"],["Notable find","Anchor stone 碇石 (14–15C junk)"]],
+    ceramics:[{name:"Celadon 青磁",pct:90,color:"#7BA99A",dot:"●●●"},{name:"Blue-and-white",pct:5,color:"#378ADD",dot:"●●"},{name:"Brown-glazed",pct:3,color:"#EF9F27",dot:"●●"},{name:"White porcelain",pct:1.5,color:"#B4B2A9",dot:"●"},{name:"Vietnamese",pct:0.5,color:"#D85A30",dot:"●"}]},
+  { id:"gushikawa", name:"Gushikawa Castle", kanji:"具志川城跡 · Kumejima 久米島", type:"gusuku", lat:26.318, lng:126.808,
+    rows:[["Period","13C – 18C"],["Primary phase","13C – 15C"],["Report","久米島町教育委員会 2018"],["Classification","久米島分類"],["Dating","Longquan kiln chronology Ch.5"]],
+    ceramics:[{name:"Celadon 青磁",pct:80,color:"#7BA99A",dot:"●●●"},{name:"Blue-and-white",pct:10,color:"#378ADD",dot:"●"},{name:"Brown-glazed",pct:7,color:"#EF9F27",dot:"●"},{name:"White porcelain",pct:3,color:"#B4B2A9",dot:"●"}]},
+  { id:"iheya", name:"Iheya Island sites", kanji:"伊平屋島遺跡群", type:"intermediate", lat:27.053, lng:127.973,
+    rows:[["Report","伊平屋村教育委員会 2000"],["Preservation","Poor — agricultural impact"],["Role","Intermediate node"]],ceramics:[]},
+  { id:"izena", name:"Izena Motojima", kanji:"伊是名元島遺跡", type:"intermediate", lat:26.924, lng:127.932,
+    rows:[["Report","伊是名村 2000"],["Status","Further analysis needed"],["Role","Intermediate node"]],ceramics:[]},
+  { id:"gushikawajima", name:"Gushikawajima sites", kanji:"具志川島遺跡群", type:"intermediate", lat:26.196, lng:127.343,
+    rows:[["Report","335-page report"],["Data status","Incomplete — PDF issues"],["Role","Intermediate node, pending"]],ceramics:[]},
+  { id:"longquan", name:"Longquan kilns", kanji:"龍泉窯 · Zhejiang", type:"kiln", lat:28.07, lng:119.13,
+    rows:[["Ceramic type","Celadon 青磁"],["At Uegusuku","●●● ~90% of assemblage"],["At Gushikawa","●●● dominant"],["Period","Song–Ming"],["Significance","Primary source, both sites"]],ceramics:[]},
+  { id:"jingdezhen", name:"Jingdezhen kilns", kanji:"景徳鎮 · Jiangxi", type:"kiln", lat:29.29, lng:117.21,
+    rows:[["Ceramic type","Blue-and-white 染付"],["At Uegusuku","●● significant"],["At Gushikawa","● present"],["Period","Ming early–mid"]],ceramics:[]},
+  { id:"fujian", name:"Fujian coast kilns", kanji:"福建省窯", type:"kiln", lat:26.08, lng:119.30,
+    rows:[["Ceramic type","White porcelain 白磁"],["Presence","Both sites ●"]],ceramics:[]},
+  { id:"vietnam", name:"Vietnamese kilns", kanji:"越南窯 · Northern Vietnam", type:"kiln_vn", lat:21.02, lng:105.83,
+    rows:[["Ceramic type","Vietnamese blue-and-white"],["Presence","Uegusuku only ●"],["Significance","Widens network beyond China"]],ceramics:[]},
+];
+
+const ROUTES = [
+  { coords:[[28.07,119.13],[27.8,121.5],[27.3,123.5],[26.92,125.5],[26.34,126.77]], color:"#7BA99A" },
+  { coords:[[29.29,117.21],[28.5,120.0],[27.5,123.0],[26.9,125.8],[26.32,126.80]], color:"#378ADD" },
+  { coords:[[26.34,126.77],[26.7,128.5],[27.3,129.5],[28.5,130.5],[30.5,130.7],[32.0,130.5]], color:"#378ADD" },
+  { coords:[[21.02,105.83],[22.5,108.5],[24.0,113.0],[24.5,117.5],[25.0,121.0],[26.05,124.5],[26.2,126.5],[26.32,126.80]], color:"#EF9F27" },
+];
+
+function getColor(s) {
+  return {gusuku:"#C9A84C", intermediate:"#7BA99A", kiln:"#378ADD", kiln_vn:"#EF9F27"}[s.type] || "#9A9585";
+}
+
+window.addEventListener('load', function() {
+  try {
+    if (typeof L === 'undefined') throw new Error('Leaflet library failed to load. Check internet connection.');
+
+    document.getElementById('loading').style.display = 'none';
+
+    const map = L.map('map', { center:[26.5,122.5], zoom:5 });
+
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_matter_no_labels/{z}/{x}/{y}{r}.png', {
+      attribution:'&copy; <a href="https://openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>',
+      maxZoom:14, subdomains:'abcd'
+    }).addTo(map);
+
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_matter_only_labels/{z}/{x}/{y}{r}.png', {
+      maxZoom:14, subdomains:'abcd', opacity:0.5, attribution:''
+    }).addTo(map);
+
+    const routeLayers = ROUTES.map(r =>
+      L.polyline(r.coords, { color:r.color, weight:1.8, dashArray:"6 4", opacity:0.65 }).addTo(map)
+    );
+
+    const markers = {};
+    SITES.forEach(site => {
+      const color = getColor(site);
+      const isKiln = site.type === 'kiln' || site.type === 'kiln_vn';
+      const isGusuku = site.type === 'gusuku';
+      let marker;
+
+      if (isKiln) {
+        marker = L.marker([site.lat, site.lng], { icon: L.divIcon({
+          html:`<div style="width:13px;height:13px;background:${color};border:2px solid rgba(255,255,255,0.35);border-radius:3px;"></div>`,
+          className:'', iconSize:[13,13], iconAnchor:[6,6]
+        })});
+      } else {
+        marker = L.circleMarker([site.lat, site.lng], {
+          radius: isGusuku ? 11 : 8,
+          fillColor: color, color: isGusuku ? "#F5F0E8" : "#1A1A2E",
+          weight: isGusuku ? 2 : 1.5, fillOpacity: 0.9
+        });
+      }
+
+      const popRows = site.rows.slice(0,3).map(r =>
+        `<div class="pop-row"><span class="pop-key">${r[0]}</span><span class="pop-val">${r[1]}</span></div>`
+      ).join('');
+      marker.bindPopup(`<div class="pop-name">${site.name}</div><div class="pop-sub">${site.kanji}</div>${popRows}`, {maxWidth:260});
+      marker.on('click', () => selectSite(site.id));
+      marker.addTo(map);
+      markers[site.id] = { marker, site };
+    });
+
+    function selectSite(id) {
+      document.querySelectorAll('.site-item').forEach(el => el.classList.remove('active'));
+      const el = document.querySelector(`.site-item[data-id="${id}"]`);
+      if (el) { el.classList.add('active'); el.scrollIntoView({block:'nearest'}); }
+      const { site, marker } = markers[id];
+      document.getElementById('d-name').textContent = site.name;
+      document.getElementById('d-kanji').textContent = site.kanji;
+      document.getElementById('d-rows').innerHTML = site.rows.map(r =>
+        `<div class="det-row"><span class="det-key">${r[0]}</span><span class="det-val">${r[1]}</span></div>`
+      ).join('');
+      const cd = document.getElementById('d-ceramics');
+      cd.innerHTML = site.ceramics.length ? `<div class="cer-label">CERAMIC ASSEMBLAGE (approx.)</div>` +
+        site.ceramics.map(c => `<div class="cer-row"><div class="cer-name">${c.name}</div><div class="cer-track"><div class="cer-bar" style="width:${c.pct}%;background:${c.color};"></div></div><div class="cer-dot">${c.dot}</div></div>`).join('') : '';
+      document.getElementById('detail').classList.add('show');
+      map.flyTo([site.lat, site.lng], Math.max(map.getZoom(), 6), {duration:0.8});
+      marker.openPopup();
+    }
+
+    window.selectSite = selectSite;
+
+    function buildList(filter) {
+      const order = {gusuku:0,intermediate:1,kiln:2,kiln_vn:3};
+      const filtered = filter === 'all' || filter === 'routes' ? SITES
+        : filter === 'kiln' ? SITES.filter(s => s.type==='kiln'||s.type==='kiln_vn')
+        : SITES.filter(s => s.type === filter);
+      document.getElementById('site-list').innerHTML = filtered
+        .sort((a,b) => (order[a.type]||9)-(order[b.type]||9))
+        .map(s => `<div class="site-item" data-id="${s.id}" onclick="selectSite('${s.id}')">
+          <div class="site-item-name"><div class="type-dot" style="background:${getColor(s)};"></div>${s.name}</div>
+          <div class="site-item-sub">${s.kanji}</div></div>`).join('');
+    }
+
+    document.querySelectorAll('.ftag').forEach(tag => {
+      tag.addEventListener('click', function() {
+        document.querySelectorAll('.ftag').forEach(t => t.classList.remove('on'));
+        this.classList.add('on');
+        const f = this.dataset.filter;
+        Object.values(markers).forEach(({marker, site}) => {
+          const show = f==='all'||f==='routes'||(f==='kiln'&&(site.type==='kiln'||site.type==='kiln_vn'))||site.type===f;
+          if (marker.setStyle) marker.setStyle({opacity:show?1:0.12, fillOpacity:show?0.9:0.08});
+          else marker.setOpacity(show?1:0.15);
+        });
+        routeLayers.forEach(l => l.setStyle({opacity: f==='routes'?0.9 : f==='all'?0.65 : 0.08}));
+        buildList(f);
+        document.getElementById('detail').classList.remove('show');
+      });
+    });
+
+    buildList('all');
+
+  } catch(e) {
+    document.getElementById('loading').querySelector('p').textContent = 'Failed to load map.';
+    const err = document.getElementById('err-msg');
+    err.style.display = 'block';
+    err.textContent = 'Error: ' + e.message + '. Make sure you have an internet connection and try refreshing.';
+  }
+});
+</script>
+</body>
+</html>
