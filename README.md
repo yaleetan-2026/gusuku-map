@@ -1,1 +1,0 @@
-# gusuku-map
